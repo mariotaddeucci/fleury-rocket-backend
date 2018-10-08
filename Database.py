@@ -11,6 +11,7 @@ class Exame(Model):
     nome = Column(String(255), nullable=False)
     descricao = Column(String(255), nullable=False)
     duracao = Column(Integer, nullable=False)
+    ac = Column(Boolean, nullable=False)
 
 
 class Restricao(Model):
@@ -21,15 +22,15 @@ class Restricao(Model):
 
 class RestricaoMsg(Model):
     __tablename__ = 'restricao_msg'
-    id_restricao = Column(Integer, primary_key=True, autoincrement=True)
-    executar = Column(Boolean, nullable=False)
+    id_restricao = Column(Integer, ForeignKey(Restricao.__tablename__ + '.id'), primary_key=True)
+    executar = Column(Boolean, nullable=False, primary_key=True)
     mensagem = Column(String(255), nullable=False)
 
 
 class ExameRestricao(Model):
     __tablename__ = 'exame_restricao'
-    id_exame = Column(Integer, primary_key=True, autoincrement=True)
-    id_restricao = Column(Integer, primary_key=True, autoincrement=True)
+    id_exame = Column(Integer, primary_key=True)
+    id_restricao = Column(Integer, primary_key=True)
     tempo_restricao = Column(String(255), nullable=False)
     executar = Column(Boolean, nullable=False)
 
