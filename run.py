@@ -1,7 +1,10 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from Database import db, Exame, ExameRestricao, ExameTag
 from vision_api import read_image_text
 from flask_cors import CORS
+from icalendar import Calendar, Event
+from datetime import datetime, timedelta
+from pytz import UTC  # timezone
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -17,6 +20,29 @@ def exames_by_tag(arr):
     return Exame.query.filter(Exame.id.in_(exames)).order_by(Exame.nome).all()
 
 
+@app.route('/api/ics', methods=['POST'])
+def ics():
+    content = request.json
+
+    start_date = content.get('start_date', datetime.now())
+    minutes = content.get('minutes', 0)
+    end_date = start_date + timedelta(minutes=minutes)
+
+    cal = Calendar()
+    cal.add('prodid', '-//My calendar product//mxm.dk//')
+    cal.add('version', '2.0')
+
+    event = Event()
+    event.add('summary', 'Agendamento Consulta Fleury')
+    event.add('dtstart', start_date)
+    event.add('dtend', end_date)
+
+    cal.add_component(event)
+    response = Response(cal.to_ical())
+    response.headers["Content-Disposition"] = "attachment; filename=calendar.ics"
+    return cal.to_ical()
+
+
 @app.route('/api/exame')
 def exames():
     exames = Exame.query.all()
@@ -27,7 +53,7 @@ def exames():
 @app.route('/api/roteiro', methods=['POST'])
 def roteiro():
     content = request.json
-    ids = content.get('ids', [])
+    ids = content.get('examToCronogram', [])
 
     restr = db.session.query(
         ExameRestricao.id_exame
@@ -57,10 +83,15 @@ def roteiro():
                     restricao[msg] = tempo_restante
         realizado = realizado + dt['duracao']
         del dt['_sa_instance_state']
-
+    restis = []
+    for name, minutes in restricao.items():
+        restis.append(name + " " + str(minutes))
+    proxima_vaga = datetime.now() + timedelta(days=3)
     return jsonify({
         'exames': result,
-        'restricoes': restricao
+        'restricoes': restis,
+        'minutos': realizado,
+        'disponivel': proxima_vaga
     })
 
 
