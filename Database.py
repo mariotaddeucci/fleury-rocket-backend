@@ -1,48 +1,45 @@
-from sqlalchemy import *
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, scoped_session
+from flask_sqlalchemy import SQLAlchemy
 
-Model = declarative_base()
+db = SQLAlchemy()
 
 
-class Exame(Model):
+class Exame(db.Model):
     __tablename__ = 'exame'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    nome = Column(String(255), nullable=False)
-    descricao = Column(String(255), nullable=False)
-    duracao = Column(Integer, nullable=False)
-    ac = Column(Boolean, nullable=False)
-    restricoes = relationship("ExameRestricao", back_populates="exame")
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(255), nullable=False)
+    descricao = db.Column(db.String(255), nullable=False)
+    duracao = db.Column(db.Integer, nullable=False)
+    ac = db.Column(db.Boolean, nullable=False)
 
 
-class Restricao(Model):
+class ExameTag(db.Model):
+    __tablename__ = 'exame_tag'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tag_name = db.Column(db.String(255), nullable=False)
+    id_exame = db.Column(db.Integer, db.ForeignKey(Exame.__tablename__ + '.id'))
+
+
+class Restricao(db.Model):
     __tablename__ = 'restricao'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    tag = Column(String(255), nullable=False, unique=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tag = db.Column(db.String(255), nullable=False, unique=True)
 
 
-class RestricaoMsg(Model):
+class RestricaoMsg(db.Model):
     __tablename__ = 'restricao_msg'
-    id_restricao = Column(Integer, ForeignKey(Restricao.__tablename__ + '.id'), primary_key=True)
-    executar = Column(Boolean, nullable=False, primary_key=True)
-    mensagem = Column(String(255), nullable=False)
+    id_restricao = db.Column(db.Integer, db.ForeignKey(Restricao.__tablename__ + '.id'), primary_key=True)
+    executar = db.Column(db.Boolean, nullable=False, primary_key=True)
+    mensagem = db.Column(db.String(255), nullable=False)
 
 
-class ExameRestricao(Model):
+class ExameRestricao(db.Model):
     __tablename__ = 'exame_restricao'
-    id_exame = Column(Integer, ForeignKey(Exame.__tablename__ + '.id'))
-    id_restricao = Column(Integer, primary_key=True)
-    tempo_restricao = Column(Integer, nullable=False)
-    executar = Column(Boolean, nullable=False)
+    id_exame = db.Column(db.Integer, primary_key=True)
+    id_restricao = db.Column(db.Integer, primary_key=True)
+    tempo_restricao = db.Column(db.Integer, nullable=False)
+    executar = db.Column(db.Boolean, nullable=False)
+    mensagem = db.relationship("RestricaoMsg", uselist=False, backref="restricao_msg")
 
-    exame = relationship("Exame", back_populates="restricoes")
-
-    __table_args__ = (
-        ForeignKeyConstraint([executar, id_restricao], [RestricaoMsg.executar, RestricaoMsg.id_restricao]),
-        UniqueConstraint('id_exame', 'id_restricao'),
-        {})
-
-
-engine = create_engine('sqlite:///databse.db')
-Model.metadata.create_all(engine)
-db_session = scoped_session(sessionmaker(bind=engine, autocommit=False, autoflush=False))
+    __table_args__ = (db.ForeignKeyConstraint([id_restricao, executar],
+                                              [RestricaoMsg.id_restricao, RestricaoMsg.executar]),
+                      {})
